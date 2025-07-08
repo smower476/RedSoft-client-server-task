@@ -1,4 +1,3 @@
-#include <connections.h>
 #include <commands.h>
 #include <csignal>
 #include <iostream>
@@ -9,10 +8,31 @@
 #include <vector>
 #include <algorithm>
 #include <cstring>
-
+#include <set>
+#include <atomic>
 
 std::vector<std::thread> threads;
 std::mutex threads_mutex;
+
+std::mutex client_sockets_mutex;
+std::set<int> client_sockets;
+
+int server_fd = -1;
+std::atomic<bool> stopFlag{false};
+
+void shutdown_server() {
+    stopFlag = true;
+    
+    if (server_fd != -1) {
+        shutdown(server_fd, SHUT_RDWR);
+    }
+}
+void signal_handler(int signum) {
+    if (signum == SIGINT) {
+        shutdown_server();
+    }
+}
+
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
@@ -85,7 +105,7 @@ int main(int argc, char* argv[]) {
                 threads.end());
 
             threads.emplace_back([client_fd]() {
-                handle_client(client_fd);
+                handle_client(client_fd, stopFlag, client_sockets_mutex, client_sockets);
             });
         }
     }

@@ -1,6 +1,5 @@
 add_executable(chat_server
     server.cpp
-    src/connections.cpp
     src/commands.cpp
 )
 

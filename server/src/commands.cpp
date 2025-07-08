@@ -1,6 +1,5 @@
 #include <network_utils.h>
 #include <commands.h>
-#include <connections.h>
 #include <validation.h>
 #include <deque>
 #include <map>
@@ -26,7 +25,7 @@ struct Channel {
 std::mutex channels_mutex;
 std::map<std::string, std::shared_ptr<Channel>> channels;
 
-static void handleJoin(int client_fd, Channel& ch, const std::string& nick) {
+void handle_join(int client_fd, Channel& ch, const std::string& nick) {
     std::string response;
     {
         std::lock_guard<std::mutex> lk(ch.mtx);
@@ -39,7 +38,7 @@ static void handleJoin(int client_fd, Channel& ch, const std::string& nick) {
     safe_send(client_fd, response);
 }
 
-static void handleExit(int client_fd, Channel& ch, const std::string& nick) {
+void handle_exit(int client_fd, Channel& ch, const std::string& nick) {
     std::string response;
     {
         std::lock_guard<std::mutex> lk(ch.mtx);
@@ -53,7 +52,7 @@ static void handleExit(int client_fd, Channel& ch, const std::string& nick) {
 
 }
 
-static void handleSend(int client_fd, Channel& ch, const std::string& nick, const std::string& message) {
+void handle_send(int client_fd, Channel& ch, const std::string& nick, const std::string& message) {
     std::string truncated = message;
     std::string response;
     
@@ -83,15 +82,13 @@ static void handleSend(int client_fd, Channel& ch, const std::string& nick, cons
 }
 
 
-static void handleRead(int client_fd, Channel& ch, const std::string& nick) {
+void handle_read(int client_fd, Channel& ch, const std::string& nick) {
     std::vector<Message> snapshot;
     std::string response;
     {
         std::lock_guard<std::mutex> lk(ch.mtx);
         if (!ch.members.count(nick)) {
             response = "ERROR: not in channel\n";
-            //safe_send(client_fd, "ERROR: not in channel\n");
-            //return;
         }
         snapshot.assign(ch.messages.begin(), ch.messages.end());
     }
@@ -116,7 +113,10 @@ static void handleRead(int client_fd, Channel& ch, const std::string& nick) {
     }
 }
 
-void handle_client(int client_fd) {
+void handle_client(int client_fd,
+                   const std::atomic<bool>& stopFlag,
+                   std::mutex& client_sockets_mutex,
+                   std::set<int>& client_sockets) {    
     std::string line;
     while (!stopFlag && recvLine(client_fd, line)) {
         std::string cmd = trim(line);
@@ -155,18 +155,18 @@ void handle_client(int client_fd) {
         Channel &ch = *ch_ptr;
 
         if (action == "join") {
-            handleJoin(client_fd, ch, nick);
+            handle_join(client_fd, ch, nick);
         } 
         else if (action == "exit") {
-            handleExit(client_fd, ch, nick);
+            handle_exit(client_fd, ch, nick);
         } 
         else if (action == "send") {
             std::string message;
             std::getline(iss, message);
-            handleSend(client_fd, ch, nick, trim(message));
+            handle_send(client_fd, ch, nick, trim(message));
         } 
         else if (action == "read") {
-            handleRead(client_fd, ch, nick);
+            handle_read(client_fd, ch, nick);
         } 
         else {
             safe_send(client_fd, "ERROR: unknown command\n");
