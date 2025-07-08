@@ -1,3 +1,4 @@
+#include <network_utils.h>
 #include <commands.h>
 #include <connections.h>
 #include <validation.h>

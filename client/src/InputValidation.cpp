@@ -1,4 +1,5 @@
 #include <iostream>
+#include <InputValidation.h>
 #include <validation.h>
 
 bool isValidNick(const std::string &nick) {

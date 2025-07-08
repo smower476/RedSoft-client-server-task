@@ -1,8 +1,8 @@
 add_executable(chat_client
-    src/main.cpp
+    client.cpp
     src/connection.cpp
     src/commands.cpp
-    src/validation.cpp
+    src/InputValidation.cpp
 )
 
 target_include_directories(chat_client PRIVATE
@@ -10,6 +10,5 @@ target_include_directories(chat_client PRIVATE
 )
 
 target_link_libraries(chat_client PRIVATE
-    #common_lib
     Chat::Common
 )

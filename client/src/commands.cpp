@@ -1,12 +1,13 @@
 #include <connection.h>
 #include <commands.h>
-#include <validation.h>
+#include <InputValidation.h>
 #include <iostream>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <poll.h>
 #include <sstream>
-#include <validations.h>
+#include <validation.h>
+#include <network_utils.h>
 
 using namespace std;
 

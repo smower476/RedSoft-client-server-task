@@ -1,7 +1,6 @@
 add_executable(chat_server
-    src/main.cpp
+    server.cpp
     src/connections.cpp
-    src/validation.cpp
     src/commands.cpp
 )
 
@@ -10,6 +9,6 @@ target_include_directories(chat_server PRIVATE
 )
 
 target_link_libraries(chat_server PRIVATE
-    #common_lib
+    Chat::Common
     pthread
 )

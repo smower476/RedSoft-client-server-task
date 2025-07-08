@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 
 add_library(common_lib STATIC
-    src/validations.cpp
+    src/validation.cpp
+    src/network_utils.cpp
 )
 
 target_include_directories(common_lib PUBLIC
