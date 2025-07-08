@@ -4,15 +4,30 @@
 #include <set>
 #include <mutex>
 #include <string>
+#include <memory>
 
-void handle_client(
-     int client_fd, 
-     const std::atomic<bool> &stopFlag, 
-     std::mutex &client_sockets_mutex, 
-     std::set<int> &client_sockets);
+struct Channel;  
 
-struct Channel;
-void handle_join(int client_fd, Channel &ch, const std::string& nick);
-void handle_exit(int client_fd, Channel &ch, const std::string& nick);
-void handle_send(int client_fd, Channel &ch, const std::string& nick, const std::string& message);
-void handle_read(int client_fd, Channel &ch, const std::string& nick);
+class ClientHandler {
+public:
+    ClientHandler(int client_fd,
+                  const std::atomic<bool>& stop_flag,
+                  std::mutex& client_sockets_mutex,
+                  std::set<int>& client_sockets);
+    
+    void operator()();  
+    void process_command(const std::string& command);
+
+private:
+    int client_fd_;
+    const std::atomic<bool>& stop_flag_;
+    std::mutex& client_sockets_mutex_;
+    std::set<int>& client_sockets_;
+
+    void handleJoin(Channel& ch, const std::string& nick);
+    void handleExit(Channel& ch, const std::string& nick);
+    void handleSend(Channel& ch, const std::string& nick, const std::string& message);
+    void handleRead(Channel& ch, const std::string& nick);
+
+    std::shared_ptr<Channel> GetOrCreateChannel(const std::string& channel_name, const std::string& action);
+};

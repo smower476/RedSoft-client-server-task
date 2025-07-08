@@ -96,18 +96,24 @@ int main(int argc, char* argv[]) {
             std::lock_guard<std::mutex> lock(client_sockets_mutex);
             client_sockets.insert(client_fd);
         }
-
         {
-            std::lock_guard<std::mutex> lock(threads_mutex);
-            threads.erase(
-                std::remove_if(threads.begin(), threads.end(),
-                    [](std::thread& t) { return !t.joinable(); }),
-                threads.end());
+        std::lock_guard<std::mutex> lock(threads_mutex);
+        threads.erase(
+            std::remove_if(threads.begin(), threads.end(),
+                [](std::thread& t) { return !t.joinable(); }),
+            threads.end());
 
-            threads.emplace_back([client_fd]() {
-                handle_client(client_fd, stopFlag, client_sockets_mutex, client_sockets);
-            });
-        }
+        threads.emplace_back([client_fd]() {
+            ClientHandler handler(
+                client_fd,
+                stopFlag,
+                client_sockets_mutex,
+                client_sockets
+            );
+            handler();
+        });
+    }     
+    
     }
 
     if (server_fd != -1) {
