@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <poll.h>
 #include <sstream>
+#include <validations.h>
 
 using namespace std;
 

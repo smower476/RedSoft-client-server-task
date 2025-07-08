@@ -11,4 +11,5 @@ target_include_directories(chat_client PRIVATE
 
 target_link_libraries(chat_client PRIVATE
     #common_lib
+    Chat::Common
 )

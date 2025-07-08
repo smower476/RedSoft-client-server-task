@@ -12,6 +12,6 @@ add_compile_options(
     -Werror
 )
 
-#add_subdirectory(common)
+add_subdirectory(common)
 add_subdirectory(server)
 add_subdirectory(client)
