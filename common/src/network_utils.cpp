@@ -81,7 +81,7 @@ bool recvLine(int sock, std::string& out, int timeout_ms) {
 
     if (out.size() >= MAX_COMMAND_LEN) {
         std::cerr << "recvLine: max command length exceeded\n";
-        return false;
+        return true;
     }
     return true;
 }

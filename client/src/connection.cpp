@@ -9,7 +9,7 @@
 
 using namespace std;
 
-int connectToServer(const string &ip, int port, int timeout_ms) {
+int connect_to_server(const string &ip, int port, int timeout_ms) {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
         perror("socket");

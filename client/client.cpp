@@ -6,7 +6,7 @@
 #include <connection.h>
 #include <commands.h>
 
-bool parseArguments(int argc, char *argv[],std::string &server_ip, int &port, std::string &channel) {
+bool parse_arguments(int argc, char *argv[],std::string &server_ip, int &port, std::string &channel) {
     if (argc != 4) {
         std::cerr << "Использование: client <server_ip> <port> <channel>" << std::endl;
         return false;
@@ -27,10 +27,10 @@ int main(int argc, char *argv[]) {
    std::string server_ip, channel;
     int port;
 
-    if (!parseArguments(argc, argv, server_ip, port, channel)) return 1;
+    if (!parse_arguments(argc, argv, server_ip, port, channel)) return 1;
 
-   std::string nick = inputNickname();
-    int sock = connectToServer(server_ip, port);
+   std::string nick = input_nickname();
+    int sock = connect_to_server(server_ip, port);
     if (sock < 0) return 2;
 
     std::cout << "Подключен к серверу " << server_ip << ":" << port

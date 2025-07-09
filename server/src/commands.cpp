@@ -142,23 +142,25 @@ void ClientHandler::handleSend(Channel& ch, const std::string& nick, const std::
         safe_send(client_fd_, "ERROR: message cannot be empty\n");
         return;
     }
+    std::string response;
 
     std::string truncated = message;
     if (truncated.size() > 256) {
-        truncated.resize(256);
+        response = "ERROR: message too long\n";
     }
-
-    std::string response;
-    {
-        std::lock_guard<std::mutex> lk(ch.mtx);
-        if (!ch.members.count(nick)) {
-            response = "ERROR: not in channel\n";
-        } else {
-            ch.messages.emplace_back(nick, truncated);
-            if (ch.messages.size() > 40) {
-                ch.messages.pop_front();
+    
+    if (response.empty()) { 
+        {
+            std::lock_guard<std::mutex> lk(ch.mtx);
+            if (!ch.members.count(nick)) {
+                response = "ERROR: not in channel\n";
+            } else {
+                ch.messages.emplace_back(nick, truncated);
+                if (ch.messages.size() > 40) {
+                    ch.messages.pop_front();
+                }
+                response = "OK\n";
             }
-            response = "OK\n";
         }
     }
     safe_send(client_fd_, response);

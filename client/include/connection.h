@@ -1,4 +1,4 @@
 #pragma once
 #include <string>
 
-int connectToServer(const std::string &ip, int port, int timeout_ms = 3000);
+int connect_to_server(const std::string &ip, int port, int timeout_ms = 3000);

@@ -1,5 +1,5 @@
 #pragma once
 #include <string>
 
-bool isValidNick(const std::string &nick);
-std::string inputNickname();
+bool is_valid_nick(const std::string &nick);
+std::string input_nickname();

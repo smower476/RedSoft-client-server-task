@@ -16,6 +16,10 @@ bool CommandHandler::handleSend(std::istringstream& iss) {
     std::string msg;
     getline(iss, msg);
     msg = trim(msg);
+    if (msg.length() > 256) {
+        std::cout << "Сообщение не может быть >256 символов" << std::endl;
+        return true;
+    }
     if (msg.empty()) {
         std::cout << "Использование: send <сообщение>" << std::endl;
         return true;
