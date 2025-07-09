@@ -24,4 +24,4 @@ bool safe_send(int sockfd, const std::string& message, int timeout_ms = TIMEOUT_
  * Чтение прерывается при достижении MAX_COMMAND_LEN или при ошибке.
  * @return true при успешном чтении строки, false при ошибке, таймауте или переполнении
 */
-bool recvLine(int sock, std::string& out, int timeout_ms = TIMEOUT_MS);
+bool recv_line(int sock, std::string& out, int timeout_ms = TIMEOUT_MS);

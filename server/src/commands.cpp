@@ -31,45 +31,50 @@ ClientHandler::ClientHandler(int client_fd,
                              const std::atomic<bool> &stop_flag,
                              std::mutex &client_sockets_mutex,
                              std::set<int> &client_sockets)
-    : client_fd_(client_fd),
-      stop_flag_(stop_flag),
-      client_sockets_mutex_(client_sockets_mutex),
-      client_sockets_(client_sockets) {}
+    : client_fd(client_fd),
+      stop_flag(stop_flag),
+      client_sockets_mutex(client_sockets_mutex),
+      client_sockets(client_sockets) {}
 
 void ClientHandler::operator()() {
     std::string line;
-    while (!stop_flag_ && recvLine(client_fd_, line)) {
+    while (!stop_flag && recv_line(client_fd, line)) {
+        if (line.size() >= MAX_COMMAND_LEN) {
+            safe_send(client_fd, "ERROR: command too long\n");
+            continue; 
+        }
+
         std::string cmd = trim(line);
         if (!cmd.empty()) {
-            process_command(cmd);
+            processCommand(cmd);
         }
     }
     
-    close(client_fd_);
+    close(client_fd);
     {
-        std::lock_guard<std::mutex> lock(client_sockets_mutex_);
-        client_sockets_.erase(client_fd_);
+        std::lock_guard<std::mutex> lock(client_sockets_mutex);
+        client_sockets.erase(client_fd);
     }
 }
 
-void ClientHandler::process_command(const std::string& command) {
+void ClientHandler::processCommand(const std::string& command) {
     std::istringstream iss(command);
     std::string action, channel_name, nick;
     iss >> action >> channel_name >> nick;
     
     if (action.empty() || channel_name.empty() || nick.empty()) {
-        safe_send(client_fd_, "ERROR: invalid command\n");
+        safe_send(client_fd, "ERROR: invalid command\n");
         return;
     }
     
     if (channel_name.size() > 24 || nick.size() > 24) {
-        safe_send(client_fd_, "ERROR: channel or nick too long\n");
+        safe_send(client_fd, "ERROR: channel or nick too long\n");
         return;
     }
 
-    auto ch_ptr = GetOrCreateChannel(channel_name, action);
+    auto ch_ptr = getOrCreateChannel(channel_name, action);
     if (!ch_ptr) {
-        safe_send(client_fd_, "ERROR: no such channel\n");
+        safe_send(client_fd, "ERROR: no such channel\n");
         return;
     }
 
@@ -90,11 +95,11 @@ void ClientHandler::process_command(const std::string& command) {
         handleRead(ch, nick);
     } 
     else {
-        safe_send(client_fd_, "ERROR: unknown command\n");
+        safe_send(client_fd, "ERROR: unknown command\n");
     }
 }
 
-std::shared_ptr<Channel> ClientHandler::GetOrCreateChannel(
+std::shared_ptr<Channel> ClientHandler::getOrCreateChannel(
     const std::string& channel_name, const std::string& action) 
 {
     std::lock_guard<std::mutex> lock(channels_mutex);
@@ -121,7 +126,7 @@ void ClientHandler::handleJoin(Channel& ch, const std::string& nick) {
             response = "OK\n";
         }
     }
-    safe_send(client_fd_, response);
+    safe_send(client_fd, response);
 }
 
 void ClientHandler::handleExit(Channel& ch, const std::string& nick) {
@@ -134,12 +139,12 @@ void ClientHandler::handleExit(Channel& ch, const std::string& nick) {
             response = "OK\n"; 
         }
     }
-    safe_send(client_fd_, response);
+    safe_send(client_fd, response);
 }
 
 void ClientHandler::handleSend(Channel& ch, const std::string& nick, const std::string& message) {
     if (message.empty()) {
-        safe_send(client_fd_, "ERROR: message cannot be empty\n");
+        safe_send(client_fd, "ERROR: message cannot be empty\n");
         return;
     }
     std::string response;
@@ -163,7 +168,7 @@ void ClientHandler::handleSend(Channel& ch, const std::string& nick, const std::
             }
         }
     }
-    safe_send(client_fd_, response);
+    safe_send(client_fd, response);
 }
 
 void ClientHandler::handleRead(Channel& ch, const std::string& nick) {
@@ -179,18 +184,18 @@ void ClientHandler::handleRead(Channel& ch, const std::string& nick) {
     }
     
     if (!response.empty()) {
-        safe_send(client_fd_, response);
+        safe_send(client_fd, response);
         return;
     }
 
     std::string header = "OK " + std::to_string(snapshot.size()) + "\n";
-    if (!safe_send(client_fd_, header)) {
+    if (!safe_send(client_fd, header)) {
         return;
     }
 
     for (const auto& msg : snapshot) {
         std::string line = msg.nick + ": " + msg.text + "\n";
-        if (!safe_send(client_fd_, line)) {
+        if (!safe_send(client_fd, line)) {
             break;
         }
     }

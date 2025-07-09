@@ -50,17 +50,22 @@ bool safe_send(int sockfd, const std::string& message, int timeout_ms) {
     return true;
 }
 
-
-bool recvLine(int sock, std::string& out, int timeout_ms) {
+bool recv_line(int sock, std::string& out, int timeout_ms) {
     out.clear();
+    bool overflow = false;
     char c;
 
-    while (out.size() < MAX_COMMAND_LEN) {
-        pollfd pfd{sock, POLLIN, 0};
+    while (true) {
+        pollfd pfd = {sock, POLLIN, 0};
         int res = poll(&pfd, 1, timeout_ms);
-        if (res <= 0) {
-            if (res == 0) std::cerr << "recvLine: timeout\n";
-            else perror("poll");
+        
+        if (res == 0) {
+            std::cerr << "recv_line: timeout" << std::endl;
+            return false; 
+        }
+        if (res < 0) {
+            if (errno == EINTR) continue;
+            perror("poll");
             return false;
         }
 
@@ -71,17 +76,32 @@ bool recvLine(int sock, std::string& out, int timeout_ms) {
             return false;
         }
         if (r == 0) {
-            std::cerr << "recvLine: connection closed\n";
+            std::cerr << "recv_line: connection closed by peer" << std::endl;
             return false;
         }
 
-        if (c == '\n') break;
-        if (c != '\r') out.push_back(c);
+        if (c == '\n') {
+            break;
+        }
+
+        if (c == '\r') {
+            continue;
+        }
+
+        if (out.size() < MAX_COMMAND_LEN) {
+            out.push_back(c);
+        } else if (!overflow) {
+            overflow = true;
+            std::cerr << "recv_line: command exceeds max length" << std::endl;
+        }
     }
 
-    if (out.size() >= MAX_COMMAND_LEN) {
-        std::cerr << "recvLine: max command length exceeded\n";
-        return true;
+    if (overflow) {
+        std::cerr << "Command truncated to " << MAX_COMMAND_LEN << " bytes" << std::endl;
+        if (out.size() > MAX_COMMAND_LEN) {
+            out.resize(MAX_COMMAND_LEN);
+        }
     }
+
     return true;
 }

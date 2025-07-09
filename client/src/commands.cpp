@@ -32,7 +32,7 @@ bool CommandHandler::handleSend(std::istringstream& iss) {
     }
 
     std::string response;
-    if (!recvLine(sock, response)) {
+    if (!recv_line(sock, response)) {
         std::cout << "Отключено от сервера после send." << std::endl;
         return false;
     }
@@ -50,7 +50,7 @@ bool CommandHandler::handleRead() {
     }
 
     std::string response;
-    if (!recvLine(sock, response)) {
+    if (!recv_line(sock, response)) {
         std::cout << "Отключено от сервера." << std::endl;
         return false;
     }
@@ -62,7 +62,7 @@ bool CommandHandler::handleRead() {
         rs >> ok >> count;
         std::cout << "Последние " << count << " сообщений в '" << channel << "':\n";
         for (int i = 0; i < count; ++i) {
-            if (!recvLine(sock, response)) break;
+            if (!recv_line(sock, response)) break;
             std::cout << response << std::endl;
         }
     } else {
@@ -90,7 +90,7 @@ bool CommandHandler::handleJoin(std::istringstream& iss) {
     }
 
     std::string response;
-    if (!recvLine(sock, response)) {
+    if (!recv_line(sock, response)) {
         std::cout << "Отключено от сервера." << std::endl;
         return false;
     }
@@ -112,7 +112,7 @@ bool CommandHandler::handleExit() {
     }
 
     std::string response;
-    if (!recvLine(sock, response)) {
+    if (!recv_line(sock, response)) {
         std::cout << "Отключено от сервера." << std::endl;
         return false;
     }

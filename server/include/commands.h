@@ -18,16 +18,16 @@ public:
     void operator()();  
     
 private:
-    int client_fd_;
-    const std::atomic<bool>& stop_flag_;
-    std::mutex& client_sockets_mutex_;
-    std::set<int>& client_sockets_;
+    int client_fd;
+    const std::atomic<bool>& stop_flag;
+    std::mutex& client_sockets_mutex;
+    std::set<int>& client_sockets;
 
-    void process_command(const std::string& command);
+    void processCommand(const std::string& command);
     void handleJoin(Channel& ch, const std::string& nick);
     void handleExit(Channel& ch, const std::string& nick);
     void handleSend(Channel& ch, const std::string& nick, const std::string& message);
     void handleRead(Channel& ch, const std::string& nick);
 
-    std::shared_ptr<Channel> GetOrCreateChannel(const std::string& channel_name, const std::string& action);
+    std::shared_ptr<Channel> getOrCreateChannel(const std::string& channel_name, const std::string& action);
 };
