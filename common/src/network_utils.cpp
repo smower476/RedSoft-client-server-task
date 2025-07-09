@@ -6,13 +6,16 @@
 #include <errno.h>
 #include <cstring>
 #include <network_utils.h>
+#include <algorithm>
 
 bool safe_send(int sockfd, const std::string& message, int timeout_ms) {
-    const char* data = message.c_str();
+    const char* data = message.data();
     size_t total_sent = 0;
     size_t to_send = message.size();
 
     while (total_sent < to_send) {
+        size_t chunk_size = std::min(static_cast<size_t>(MAX_CHUNK_SIZE), to_send - total_sent);
+
         pollfd pfd{sockfd, POLLOUT, 0};
         int res = poll(&pfd, 1, timeout_ms);
         if (res <= 0) {
@@ -24,10 +27,10 @@ bool safe_send(int sockfd, const std::string& message, int timeout_ms) {
             return false;
         }
 
-        ssize_t sent = send(sockfd, data + total_sent, to_send - total_sent, MSG_NOSIGNAL);
+        ssize_t sent = send(sockfd, data + total_sent, chunk_size, MSG_NOSIGNAL);
         if (sent < 0) {
             if (errno == EINTR) {
-                continue;
+                continue; 
             }
 
             if (errno == EPIPE || errno == ECONNRESET || errno == ENOTCONN ||
@@ -53,41 +56,47 @@ bool safe_send(int sockfd, const std::string& message, int timeout_ms) {
 bool recv_line(int sock, std::string& out, int timeout_ms) {
     out.clear();
     bool overflow = false;
-    char c;
+    
+    static char buffer[RECV_BUFFER_SIZE];
+    static size_t buf_pos = 0;
+    static size_t buf_end = 0;
 
     while (true) {
-        pollfd pfd = {sock, POLLIN, 0};
-        int res = poll(&pfd, 1, timeout_ms);
-        
-        if (res == 0) {
-            std::cerr << "recv_line: timeout" << std::endl;
-            return false; 
-        }
-        if (res < 0) {
-            if (errno == EINTR) continue;
-            perror("poll");
-            return false;
+        if (buf_pos >= buf_end) {
+            pollfd pfd = { sock, POLLIN, 0 };
+            int res = poll(&pfd, 1, timeout_ms);
+            if (res == 0) {
+                std::cerr << "recv_line: timeout" << std::endl;
+                return false;
+            }
+            if (res < 0) {
+                if (errno == EINTR) continue;
+                perror("poll");
+                return false;
+            }
+
+            ssize_t r = recv(sock, buffer, RECV_BUFFER_SIZE, 0);
+            if (r < 0) {
+                if (errno == EINTR) continue;
+                perror("recv");
+                return false;
+            }
+            if (r == 0) {
+                std::cerr << "recv_line: connection closed by peer" << std::endl;
+                return false;
+            }
+
+            buf_pos = 0;
+            buf_end = static_cast<size_t>(r);
         }
 
-        ssize_t r = recv(sock, &c, 1, 0);
-        if (r < 0) {
-            if (errno == EINTR) continue;
-            perror("recv");
-            return false;
-        }
-        if (r == 0) {
-            std::cerr << "recv_line: connection closed by peer" << std::endl;
-            return false;
-        }
-
+        char c = buffer[buf_pos++];
         if (c == '\n') {
             break;
         }
-
         if (c == '\r') {
             continue;
         }
-
         if (out.size() < MAX_COMMAND_LEN) {
             out.push_back(c);
         } else if (!overflow) {
@@ -105,3 +114,4 @@ bool recv_line(int sock, std::string& out, int timeout_ms) {
 
     return true;
 }
+

@@ -9,6 +9,14 @@
 #define MAX_COMMAND_LEN 1024
 #endif
 
+#ifndef RECV_BUFFER_SIZE
+#define RECV_BUFFER_SIZE 128
+#endif
+
+#ifndef MAX_CHUNK_SIZE
+#define MAX_CHUNK_SIZE 128
+#endif
+
 #ifndef TIMEOUT_MS
 #define TIMEOUT_MS 30000
 #endif
