@@ -28,9 +28,9 @@ namespace {
 }
 
 ClientHandler::ClientHandler(int client_fd,
-                             const std::atomic<bool>& stop_flag,
-                             std::mutex& client_sockets_mutex,
-                             std::set<int>& client_sockets)
+                             const std::atomic<bool> &stop_flag,
+                             std::mutex &client_sockets_mutex,
+                             std::set<int> &client_sockets)
     : client_fd_(client_fd),
       stop_flag_(stop_flag),
       client_sockets_mutex_(client_sockets_mutex),

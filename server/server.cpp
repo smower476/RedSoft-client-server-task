@@ -96,6 +96,7 @@ int main(int argc, char* argv[]) {
             std::lock_guard<std::mutex> lock(client_sockets_mutex);
             client_sockets.insert(client_fd);
         }
+
         {
         std::lock_guard<std::mutex> lock(threads_mutex);
         threads.erase(

@@ -9,148 +9,147 @@
 #include <validation.h>
 #include <network_utils.h>
 
-using namespace std;
+CommandHandler::CommandHandler(int sock, const std::string& channel, const std::string& nick)
+    : sock(sock), channel(channel), nick(nick) {}
 
-bool handleSend(int sock, const string &channel, const string &nick, istringstream &iss) {
-    string msg;
+bool CommandHandler::handleSend(std::istringstream& iss) {
+    std::string msg;
     getline(iss, msg);
     msg = trim(msg);
     if (msg.empty()) {
-        cout << "Использование: send <сообщение>" << endl;
+        std::cout << "Использование: send <сообщение>" << std::endl;
         return true;
     }
 
-    string request = "send " + channel + " " + nick + " " + msg + "\n";
+    std::string request = "send " + channel + " " + nick + " " + msg + "\n";
     if (!safe_send(sock, request)) {
-        cout << "Не удалось отправить сообщение." << endl;
+        std::cout << "Не удалось отправить сообщение." << std::endl;
         return false;
     }
 
-    string response;
+    std::string response;
     if (!recvLine(sock, response)) {
-        cout << "Отключено от сервера после send." << endl;
+        std::cout << "Отключено от сервера после send." << std::endl;
         return false;
     }
-    if (response.rfind("OK", 0) == 0) {
-    } else {
-        cout << "Ошибка сервера при send: " << response << endl;
+    if (response.rfind("OK", 0) != 0) {
+        std::cout << "Ошибка сервера: " << response << std::endl;
     }
-
     return true;
 }
 
-bool handleRead(int sock, const string &channel, const string &nick) {
-    string request = "read " + channel + " " + nick + "\n";
+bool CommandHandler::handleRead() {
+    std::string request = "read " + channel + " " + nick + "\n";
     if (!safe_send(sock, request)) {
-        cout << "Не удалось отправить запрос на чтение." << endl;
+        std::cout << "Не удалось отправить запрос чтения." << std::endl;
         return false;
     }
 
-    string response;
+    std::string response;
     if (!recvLine(sock, response)) {
-        cout << "Отключено от сервера." << endl;
+        std::cout << "Отключено от сервера." << std::endl;
         return false;
     }
 
     if (response.rfind("OK", 0) == 0) {
-        istringstream rs(response);
-        string ok;
+        std::istringstream rs(response);
+        std::string ok;
         int count;
         rs >> ok >> count;
-        cout << "Последние " << count << " сообщений в канале '" << channel << "':" << endl;
+        std::cout << "Последние " << count << " сообщений в '" << channel << "':\n";
         for (int i = 0; i < count; ++i) {
             if (!recvLine(sock, response)) break;
-            cout << response << endl;
+            std::cout << response << std::endl;
         }
     } else {
-        cout << "Ошибка: " << response << endl;
+        std::cout << "Ошибка: " << response << std::endl;
     }
-
     return true;
 }
 
-bool handleJoin(int sock, string &channel, const string &nick, istringstream &iss) {
-    string new_channel;
+bool CommandHandler::handleJoin(std::istringstream& iss) {
+    std::string new_channel;
     iss >> new_channel;
     if (new_channel.empty()) {
-        cout << "Использование: join <канал>" << endl;
+        std::cout << "Использование: join <канал>" << std::endl;
         return true;
     }
     if (new_channel.size() > 24) {
-        cout << "Имя канала слишком длинное (максимум 24 символа)" << endl;
+        std::cout << "Имя канала слишком длинное (максимум 24 символа)" << std::endl;
         return true;
     }
 
-    string request = "join " + new_channel + " " + nick + "\n";
+    std::string request = "join " + new_channel + " " + nick + "\n";
     if (!safe_send(sock, request)) {
-        cout << "Не удалось отправить запрос на присоединение." << endl;
+        std::cout << "Не удалось отправить запрос присоединения." << std::endl;
         return false;
     }
 
-    string response;
+    std::string response;
     if (!recvLine(sock, response)) {
-        cout << "Отключено от сервера." << endl;
+        std::cout << "Отключено от сервера." << std::endl;
         return false;
     }
+
     if (response.rfind("OK", 0) == 0) {
         channel = new_channel;
-        cout << "Вы присоединились к каналу: " << channel << endl;
+        std::cout << "Присоединились к каналу: " << channel << std::endl;
     } else {
-        cout << "Ошибка при присоединении: " << response << endl;
+        std::cout << "Ошибка присоединения: " << response << std::endl;
     }
-
     return true;
 }
 
-bool handleExit(int sock, const string &channel, const string &nick) {
-    string request = "exit " + channel + " " + nick + "\n";
+bool CommandHandler::handleExit() {
+    std::string request = "exit " + channel + " " + nick + "\n";
     if (!safe_send(sock, request)) {
-        cout << "Не удалось отправить запрос выхода." << endl;
+        std::cout << "Не удалось отправить запрос выхода." << std::endl;
         return false;
     }
-    string response;
+
+    std::string response;
     if (!recvLine(sock, response)) {
-        cout << "Отключено от сервера после exit." << endl;
+        std::cout << "Отключено от сервера." << std::endl;
         return false;
     }
+
     if (response.rfind("OK", 0) == 0) {
-        cout << "Вы вышли из канала: " << channel << endl;
+        std::cout << "Вышли из канала: " << channel << std::endl;
     } else {
-        cout << "Ошибка при выходе: " << response << endl;
+        std::cout << "Ошибка выхода: " << response << std::endl;
     }
     return true;
 }
 
-void commandLoop(int sock, string &channel, const string &nick) {
-    string line;
+void CommandHandler::run() {
+    std::string line;
     while (true) {
-        cout << "> ";
-        if (!getline(cin, line)) break;
+        std::cout << "> ";
+        if (!std::getline(std::cin, line)) break;
         line = trim(line);
         if (line.empty()) continue;
         if (line == "quit") break;
 
-        istringstream iss(line);
-        string cmd;
+        std::istringstream iss(line);
+        std::string cmd;
         iss >> cmd;
 
-        bool ok = true;
+        bool status = true;
         if (cmd == "send") {
-            ok = handleSend(sock, channel, nick, iss);
+            status = handleSend(iss);
         } else if (cmd == "read") {
-            ok = handleRead(sock, channel, nick);
+            status = handleRead();
         } else if (cmd == "join") {
-            ok = handleJoin(sock, channel, nick, iss);
+            status = handleJoin(iss);
         } else if (cmd == "exit") {
-            ok = handleExit(sock, channel, nick);
+            status = handleExit();
         } else {
-            cout << "Неизвестная команда. Доступные: send, read, join, exit, quit." << endl;
+            std::cout << "Неизвестная команда. Доступные: send, read, join, exit, quit.\n";
         }
 
-        if (!ok) {
-            cout << "Соединение прервано." << endl;
+        if (!status) {
+            std::cout << "Соединение прервано.\n";
             break;
         }
     }
 }
-

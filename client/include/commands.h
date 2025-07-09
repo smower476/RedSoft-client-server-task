@@ -2,12 +2,18 @@
 #include <string>
 #include <sstream>
 
-bool handleSend(int sock, const std::string &channel, const std::string &nick, std::istringstream &iss);
-bool handleRead(int sock, const std::string &channel, const std::string &nick);
-bool handleJoin(int sock, std::string &channel, const std::string &nick, std::istringstream &iss);
-bool handleExit(int sock, const std::string &channel, const std::string &nick);
-void commandLoop(int sock, std::string &channel, const std::string &nick);
+class CommandHandler {
+private:
+    int sock;
+    std::string channel;
+    std::string nick;
 
+    bool handleSend(std::istringstream& iss);
+    bool handleRead();
+    bool handleJoin(std::istringstream& iss);
+    bool handleExit();
 
-
-
+public:
+    CommandHandler(int sock, const std::string& channel, const std::string& nick);
+    void run();
+};

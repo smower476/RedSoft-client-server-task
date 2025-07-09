@@ -27,7 +27,7 @@ int connectToServer(const string &ip, int port, int timeout_ms) {
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
     if (inet_pton(AF_INET, ip.c_str(), &serv_addr.sin_addr) <= 0) {
-        cerr << "Неверный адрес сервера" << endl;
+        cerr << "Неверный адрес сервера" << std::endl;
         close(sock);
         return -1;
     }

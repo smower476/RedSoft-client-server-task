@@ -14,12 +14,12 @@ bool isValidNick(const std::string &nick) {
 std::string inputNickname() {
     std::string nick;
     while (true) {
-        cout << "Введите ваш ник (max 24 символа): ";
-        getline(cin, nick);
+        std::cout << "Введите ваш ник (max 24 символа): ";
+        getline(std::cin, nick);
         nick = trim(nick);
 
         if (nick.empty() || nick.size() > 24 || !isValidNick(nick)) {
-            cerr << "Неверный ник, попробуйте снова." << endl;
+            std::cerr << "Неверный ник, попробуйте снова." << std::endl;
         } else {
             return nick;
         }
