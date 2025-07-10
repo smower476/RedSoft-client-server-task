@@ -8,7 +8,6 @@
 #include <sstream>
 #include <validation.h>
 #include <network_utils.h>
-#include <algorithm>
 
 CommandHandler::CommandHandler(int sock, const std::string& channel, const std::string& nick)
     : sock(sock), channel(channel), nick(nick) {}
@@ -50,8 +49,38 @@ bool CommandHandler::handleRead() {
         return false;
     }
 
-    std::string header;
-    if (!recv_line(sock, header)) {
+    std::string read_buf;
+    size_t read_pos = 0;
+
+    auto recvLineBuffered = [&]() -> std::string {
+        while (true) {
+            size_t nl_pos = read_buf.find('\n', read_pos);
+            if (nl_pos != std::string::npos) {
+                std::string line = read_buf.substr(read_pos, nl_pos - read_pos);
+                read_pos = nl_pos + 1;
+                if (read_pos > 4096) {
+                    read_buf.erase(0, read_pos);
+                    read_pos = 0;
+                }
+                return line;
+            }
+
+            char temp[4096];
+            ssize_t n = recv(sock, temp, sizeof(temp), 0);
+            if (n < 0) {
+                if (errno == EINTR) continue;
+                perror("recv");
+                return "";
+            }
+            if (n == 0) {
+                return "";
+            }
+            read_buf.append(temp, static_cast<size_t>(n));
+        }
+    };
+
+    std::string header = recvLineBuffered();
+    if (header.empty()) {
         std::cout << "Отключено от сервера.\n";
         return false;
     }
@@ -61,37 +90,28 @@ bool CommandHandler::handleRead() {
         return true;
     }
 
-    int count = std::stoi(header.substr(3));
-    std::cout << "Последние " << count << " сообщений в '" << channel << "':\n";
-
-    std::string block;
-    block.reserve(static_cast<size_t>(count) * 80);
-    int lines_seen = 0;
-    while (lines_seen < count) {
-        char buf[RECV_BUFFER_SIZE];
-        ssize_t r = recv(sock, buf, sizeof(buf), 0);
-        if (r < 0) {
-            if (errno == EINTR) continue;
-            perror("recv");
-            return false;
-        }
-        if (r == 0) {
-            std::cerr << "Соединение закрыто сервером\n";
-            return false;
-        }
-        block.append(buf, static_cast<size_t>(r));
-        lines_seen = static_cast<int>(std::count(block.begin(), block.end(), '\n'));
+    int count = 0;
+    try {
+        count = std::stoi(header.substr(3));
+    } catch (...) {
+        std::cout << "Некорректный заголовок от сервера: " << header << "\n";
+        return false;
     }
 
-    std::istringstream ss(block);
-    std::string line;
+    std::cout << "Последние " << count << " сообщений в '" << channel << "':\n";
+
     for (int i = 0; i < count; ++i) {
-        if (!std::getline(ss, line)) break;
+        std::string line = recvLineBuffered();
+        if (line.empty()) {
+            std::cerr << "Ошибка при получении сообщения #" << (i + 1) << "\n";
+            return false;
+        }
         std::cout << line << "\n";
     }
 
     return true;
 }
+
 
 bool CommandHandler::handleJoin(std::istringstream& iss) {
     std::string new_channel;
