@@ -5,8 +5,21 @@
 #include <mutex>
 #include <string>
 #include <memory>
+#include <map>
+#include <deque>
 
-struct Channel;  
+struct Message {
+    std::string nick;
+    std::string text;
+    Message(const std::string& n, const std::string& t) : nick(n), text(t) {}
+};
+
+struct Channel {
+    std::deque<Message> messages;
+    std::set<std::string> members;
+    std::mutex mtx;
+};
+
 
 class ClientHandler {
 public:
@@ -22,7 +35,9 @@ private:
     const std::atomic<bool>& stop_flag;
     std::mutex& client_sockets_mutex;
     std::set<int>& client_sockets;
-
+    static std::mutex channels_mutex;
+    static std::map<std::string, std::shared_ptr<Channel>> channels;
+    
     void processCommand(const std::string& command);
     void handleJoin(Channel& ch, const std::string& nick);
     void handleExit(Channel& ch, const std::string& nick);

@@ -7,9 +7,7 @@
 #include <errno.h>
 #include <cstring>
 
-using namespace std;
-
-int connect_to_server(const string &ip, int port, int timeout_ms) {
+int connect_to_server(const std::string &ip, int port, int timeout_ms) {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
         perror("socket");
@@ -27,7 +25,7 @@ int connect_to_server(const string &ip, int port, int timeout_ms) {
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
     if (inet_pton(AF_INET, ip.c_str(), &serv_addr.sin_addr) <= 0) {
-        cerr << "Неверный адрес сервера" << std::endl;
+        std::cerr << "Неверный адрес сервера" << std::endl;
         close(sock);
         return -1;
     }
@@ -47,7 +45,7 @@ int connect_to_server(const string &ip, int port, int timeout_ms) {
 
         int poll_res = poll(&pfd, 1, timeout_ms);
         if (poll_res <= 0) {
-            if (poll_res == 0) cerr << "connect: timeout" << endl;
+            if (poll_res == 0) std::cerr << "connect: timeout" << std::endl;
             else perror("poll");
             close(sock);
             return -1;
@@ -56,7 +54,7 @@ int connect_to_server(const string &ip, int port, int timeout_ms) {
         int err = 0;
         socklen_t len = sizeof(err);
         if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &err, &len) < 0 || err != 0) {
-            cerr << "connect failed: " << strerror(err) << endl;
+            std::cerr << "connect failed: " << strerror(err) << std::endl;
             close(sock);
             return -1;
         }

@@ -10,22 +10,6 @@
 #include <vector>
 #include <unistd.h>
 
-struct Message {
-    std::string nick;
-    std::string text;
-    Message(const std::string& n, const std::string& t) : nick(n), text(t) {}
-};
-
-struct Channel {
-    std::deque<Message> messages;
-    std::set<std::string> members;
-    std::mutex mtx;
-};
-
-namespace {
-    std::mutex channels_mutex;
-    std::map<std::string, std::shared_ptr<Channel>> channels;
-}
 
 ClientHandler::ClientHandler(int client_fd,
                              const std::atomic<bool> &stop_flag,
@@ -35,6 +19,9 @@ ClientHandler::ClientHandler(int client_fd,
       stop_flag(stop_flag),
       client_sockets_mutex(client_sockets_mutex),
       client_sockets(client_sockets) {}
+
+std::mutex ClientHandler::channels_mutex;
+std::map<std::string, std::shared_ptr<Channel>> ClientHandler::channels;
 
 void ClientHandler::operator()() {
     std::string line;

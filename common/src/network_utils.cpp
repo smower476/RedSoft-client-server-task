@@ -14,7 +14,7 @@ bool safe_send(int sockfd, const std::string& message, int timeout_ms) {
     size_t to_send = message.size();
 
     while (total_sent < to_send) {
-        size_t chunk_size = std::min(static_cast<size_t>(MAX_CHUNK_SIZE), to_send - total_sent);
+        size_t buffer_size = std::min(static_cast<size_t>(MAX_CHUNK_SIZE), to_send - total_sent);
 
         pollfd pfd{sockfd, POLLOUT, 0};
         int res = poll(&pfd, 1, timeout_ms);
@@ -27,7 +27,7 @@ bool safe_send(int sockfd, const std::string& message, int timeout_ms) {
             return false;
         }
 
-        ssize_t sent = send(sockfd, data + total_sent, chunk_size, MSG_NOSIGNAL);
+        ssize_t sent = send(sockfd, data + total_sent, buffer_size, MSG_NOSIGNAL);
         if (sent < 0) {
             if (errno == EINTR) {
                 continue; 
@@ -57,9 +57,9 @@ bool recv_line(int sock, std::string& out, int timeout_ms) {
     out.clear();
     bool overflow = false;
     
-    static char buffer[RECV_BUFFER_SIZE];
-    static size_t buf_pos = 0;
-    static size_t buf_end = 0;
+    char buffer[RECV_BUFFER_SIZE];
+    size_t buf_pos = 0;
+    size_t buf_end = 0;
 
     while (true) {
         if (buf_pos >= buf_end) {
@@ -94,9 +94,7 @@ bool recv_line(int sock, std::string& out, int timeout_ms) {
         if (c == '\n') {
             break;
         }
-        if (c == '\r') {
-            continue;
-        }
+
         if (out.size() < MAX_COMMAND_LEN) {
             out.push_back(c);
         } else if (!overflow) {
