@@ -8,6 +8,7 @@
 #include <sstream>
 #include <validation.h>
 #include <network_utils.h>
+#include <algorithm>
 
 CommandHandler::CommandHandler(int sock, const std::string& channel, const std::string& nick)
     : sock(sock), channel(channel), nick(nick) {}
@@ -45,29 +46,50 @@ bool CommandHandler::handleSend(std::istringstream& iss) {
 bool CommandHandler::handleRead() {
     std::string request = "read " + channel + " " + nick + "\n";
     if (!safe_send(sock, request)) {
-        std::cout << "Не удалось отправить запрос чтения." << std::endl;
+        std::cout << "Не удалось отправить запрос чтения.\n";
         return false;
     }
 
-    std::string response;
-    if (!recv_line(sock, response)) {
-        std::cout << "Отключено от сервера." << std::endl;
+    std::string header;
+    if (!recv_line(sock, header)) {
+        std::cout << "Отключено от сервера.\n";
         return false;
     }
 
-    if (response.rfind("OK", 0) == 0) {
-        std::istringstream rs(response);
-        std::string ok;
-        int count;
-        rs >> ok >> count;
-        std::cout << "Последние " << count << " сообщений в '" << channel << "':\n";
-        for (int i = 0; i < count; ++i) {
-            if (!recv_line(sock, response)) break;
-            std::cout << response << std::endl;
+    if (header.rfind("OK ", 0) != 0) {
+        std::cout << "Ошибка: " << header << "\n";
+        return true;
+    }
+
+    int count = std::stoi(header.substr(3));
+    std::cout << "Последние " << count << " сообщений в '" << channel << "':\n";
+
+    std::string block;
+    block.reserve(static_cast<size_t>(count) * 80);
+    int lines_seen = 0;
+    while (lines_seen < count) {
+        char buf[RECV_BUFFER_SIZE];
+        ssize_t r = recv(sock, buf, sizeof(buf), 0);
+        if (r < 0) {
+            if (errno == EINTR) continue;
+            perror("recv");
+            return false;
         }
-    } else {
-        std::cout << "Ошибка: " << response << std::endl;
+        if (r == 0) {
+            std::cerr << "Соединение закрыто сервером\n";
+            return false;
+        }
+        block.append(buf, static_cast<size_t>(r));
+        lines_seen = static_cast<int>(std::count(block.begin(), block.end(), '\n'));
     }
+
+    std::istringstream ss(block);
+    std::string line;
+    for (int i = 0; i < count; ++i) {
+        if (!std::getline(ss, line)) break;
+        std::cout << line << "\n";
+    }
+
     return true;
 }
 
