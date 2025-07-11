@@ -39,21 +39,63 @@ std::string CommandHandler::recvMessage() {
         if (nl_pos != std::string::npos) {
             std::string line = read_buf.substr(read_pos, nl_pos - read_pos);
             read_pos = nl_pos + 1;
-            if (read_pos > 4096) {
+            
+            if (read_pos > RECV_BUFFER_SIZE) {
                 read_buf.erase(0, read_pos);
                 read_pos = 0;
             }
             return line;
         }
 
-        char temp[4096];
+        if (read_buf.size() - read_pos > MAX_LINE_LENGTH) {
+            std::cerr << "recvMessage: line too long (max " << MAX_LINE_LENGTH << " bytes)" << std::endl;
+            
+            size_t skip_pos = read_buf.find('\n', read_pos);
+            if (skip_pos != std::string::npos) {
+                read_pos = skip_pos + 1;
+            } else {
+                read_buf.clear();
+                read_pos = 0;
+            }
+            return "";
+        }
+
+        struct pollfd pfd = {sock, POLLIN, 0};
+        int poll_res = poll(&pfd, 1, TIMEOUT_MS);
+        
+        if (poll_res == 0) {
+            std::cerr << "recvMessage: timeout "<< std::endl;
+            return "";
+        }
+        
+        if (poll_res < 0) {
+            if (errno == EINTR) continue;  
+            perror("poll");
+            return "";
+        }
+
+        if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) {
+            std::cerr << "recvMessage: socket error (revents: " << pfd.revents << ")" << std::endl;
+            return "";
+        }
+
+        if (!(pfd.revents & POLLIN)) {
+            continue;  
+        }
+
+        char temp[RECV_BUFFER_SIZE];
         ssize_t n = recv(sock, temp, sizeof(temp), 0);
+        
         if (n < 0) {
-            if (errno == EINTR) continue;
+            if (errno == EINTR) continue;  
             perror("recv");
             return "";
         }
-        if (n == 0) return "";
+        
+        if (n == 0) {
+            std::cerr << "recvMessage: connection closed" << std::endl;
+            return "";
+        }
         
         read_buf.append(temp, static_cast<size_t>(n));
     }

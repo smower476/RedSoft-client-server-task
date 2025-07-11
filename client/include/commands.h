@@ -4,6 +4,10 @@
 
 #define RECONNECT_ATTEMPTS 1
 
+#ifndef MAX_LINE_LENGTH
+#define MAX_LINE_LENGTH 1024
+#endif
+
 class CommandHandler {
 private:
     int sock;

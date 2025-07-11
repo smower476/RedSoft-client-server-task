@@ -14,7 +14,7 @@ bool safe_send(int sockfd, const std::string& message, int timeout_ms) {
     size_t to_send = message.size();
 
     while (total_sent < to_send) {
-        size_t buffer_size = std::min(static_cast<size_t>(MAX_CHUNK_SIZE), to_send - total_sent);
+        size_t buffer_size = std::min(static_cast<size_t>(SEND_BUFFER_SIZE), to_send - total_sent);
 
         pollfd pfd{sockfd, POLLOUT, 0};
         int res = poll(&pfd, 1, timeout_ms);

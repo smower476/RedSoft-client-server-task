@@ -13,8 +13,8 @@
 #define RECV_BUFFER_SIZE 128
 #endif
 
-#ifndef MAX_CHUNK_SIZE
-#define MAX_CHUNK_SIZE 128
+#ifndef SEND_BUFFER_SIZE
+#define SEND_BUFFER_SIZE 128
 #endif
 
 #ifndef TIMEOUT_MS
