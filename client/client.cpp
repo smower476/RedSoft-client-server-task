@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Подключен к серверу " << server_ip << ":" << port
          << ", начальный канал: " << channel << std::endl;
 
-    CommandHandler handler(sock, channel, nick);
+    CommandHandler handler(server_ip, port, sock, channel, nick);
     handler.run();
 
     close(sock);
