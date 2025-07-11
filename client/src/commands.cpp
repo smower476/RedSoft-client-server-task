@@ -9,8 +9,10 @@
 #include <validation.h>
 #include <network_utils.h>
 
-CommandHandler::CommandHandler(const std::string &ip, int port, int sock, const std::string &channel, const std::string &nick)
-    : sock(sock), server_ip(ip), server_port(port), channel(channel), nick(nick) {}
+CommandHandler::CommandHandler(const std::string &ip, int port, int sock, 
+                             const std::string &channel, const std::string &nick)
+    : sock(sock), server_ip(ip), server_port(port), 
+      channel(channel), nick(nick), read_buf(), read_pos(0) {}
 
 bool CommandHandler::tryReconnect() {
     int attempts = 0;
@@ -29,6 +31,32 @@ bool CommandHandler::tryReconnect() {
         sleep(1); 
     }
     return false;
+}
+
+std::string CommandHandler::recvMessage() {
+    while (true) {
+        size_t nl_pos = read_buf.find('\n', read_pos);
+        if (nl_pos != std::string::npos) {
+            std::string line = read_buf.substr(read_pos, nl_pos - read_pos);
+            read_pos = nl_pos + 1;
+            if (read_pos > 4096) {
+                read_buf.erase(0, read_pos);
+                read_pos = 0;
+            }
+            return line;
+        }
+
+        char temp[4096];
+        ssize_t n = recv(sock, temp, sizeof(temp), 0);
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            perror("recv");
+            return "";
+        }
+        if (n == 0) return "";
+        
+        read_buf.append(temp, static_cast<size_t>(n));
+    }
 }
 
 bool CommandHandler::handleSend(std::istringstream& iss) {
@@ -75,34 +103,6 @@ bool CommandHandler::handleRead() {
     std::string request = "read " + channel + " " + nick + "\n";
 
     while (attempts_left > 0) {
-        std::string read_buf;
-        size_t read_pos = 0;
-
-        auto recvLineBuffered = [&]() -> std::string {
-            while (true) {
-                size_t nl_pos = read_buf.find('\n', read_pos);
-                if (nl_pos != std::string::npos) {
-                    std::string line = read_buf.substr(read_pos, nl_pos - read_pos);
-                    read_pos = nl_pos + 1;
-                    if (read_pos > 4096) {
-                        read_buf.erase(0, read_pos);
-                        read_pos = 0;
-                    }
-                    return line;
-                }
-
-                char temp[4096];
-                ssize_t n = recv(sock, temp, sizeof(temp), 0);
-                if (n < 0) {
-                    if (errno == EINTR) continue;
-                    perror("recv");
-                    return "";
-                }
-                if (n == 0) return "";
-                read_buf.append(temp, static_cast<size_t>(n));
-            }
-        };
-
         if (!safe_send(sock, request)) {
             std::cout << "Не удалось отправить запрос чтения.\n";
             attempts_left--;
@@ -110,7 +110,7 @@ bool CommandHandler::handleRead() {
             else return false;
         }
 
-        std::string header = recvLineBuffered();
+        std::string header = recvMessage();
         if (header.empty()) {
             std::cout << "Отключено от сервера.\n";
             attempts_left--;
@@ -135,7 +135,7 @@ bool CommandHandler::handleRead() {
 
         bool success = true;
         for (int i = 0; i < count; ++i) {
-            std::string line = recvLineBuffered();
+            std::string line = recvMessage();
             if (line.empty()) {
                 std::cerr << "Ошибка при получении сообщения #" << (i+1) << "\n";
                 success = false;

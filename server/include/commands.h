@@ -8,6 +8,8 @@
 #include <map>
 #include <deque>
 
+#define MAX_MESSAGE_LENGTH 256
+
 struct Message {
     std::string nick;
     std::string text;

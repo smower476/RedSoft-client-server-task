@@ -43,7 +43,7 @@ bool safe_send(int sockfd, const std::string& message, int timeout_ms) {
         }
 
         if (sent == 0) {
-            std::cerr << "safe_send: connection closed by peer" << std::endl;
+            std::cerr << "safe_send: connection closed" << std::endl;
             return false;
         }
 
@@ -82,7 +82,7 @@ bool recv_line(int sock, std::string& out, int timeout_ms) {
                 return false;
             }
             if (r == 0) {
-                std::cerr << "recv_line: connection closed by peer" << std::endl;
+                std::cerr << "recv_line: connection closed" << std::endl;
                 return false;
             }
 

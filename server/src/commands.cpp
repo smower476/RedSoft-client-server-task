@@ -137,7 +137,7 @@ void ClientHandler::handleSend(Channel& ch, const std::string& nick, const std::
     std::string response;
 
     std::string truncated = message;
-    if (truncated.size() > 256) {
+    if (truncated.size() > MAX_MESSAGE_LENGTH) {
         response = "ERROR: message too long\n";
     }
     
